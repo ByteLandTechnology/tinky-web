@@ -22,13 +22,13 @@ Install `tinky-web` and its peer dependencies:
 
 ```bash
 # npm
-npm install tinky-web tinky react @xterm/xterm @xterm/addon-fit
+npm install tinky-web
 
 # yarn
-yarn add tinky-web tinky react @xterm/xterm @xterm/addon-fit
+yarn add tinky-web
 
 # pnpm
-pnpm add tinky-web tinky react @xterm/xterm @xterm/addon-fit
+pnpm add tinky-web
 ```
 
 ## Quick Start

@@ -3,6 +3,7 @@ import eslint from "@eslint/js";
 import { defineConfig } from "eslint/config";
 import eslintTypescript from "typescript-eslint";
 import eslintReact from "eslint-plugin-react";
+import globals from "globals";
 
 export default defineConfig(
   eslint.configs.recommended,
@@ -15,11 +16,14 @@ export default defineConfig(
       react: {
         version: "detect",
       },
-      languageOptions: {
-        parserOptions: {
-          project: true,
-          tsconfigRootDir: import.meta.dirname,
-        },
+    },
+  },
+  {
+    files: ["tests/**/*.{ts,tsx}"],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.vitest,
       },
     },
   },

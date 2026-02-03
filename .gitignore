@@ -143,3 +143,6 @@ vite.config.ts.timestamp-*
 # Build output
 bin/
 lib/
+
+# Git worktrees
+.worktrees/

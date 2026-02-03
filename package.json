@@ -1,6 +1,6 @@
 {
   "name": "tinky-web",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A library for rendering Tinky applications in the browser",
   "keywords": [
     "react",

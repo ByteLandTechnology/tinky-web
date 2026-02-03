@@ -1,3 +1,9 @@
+## [1.0.1](https://github.com/ByteLandTechnology/tinky-web/compare/v1.0.0...v1.0.1) (2026-02-03)
+
+### 🔧 Chores
+
+- **deps:** update tinky-keypress dependency to >=1.3.1 ([d48abe1](https://github.com/ByteLandTechnology/tinky-web/commit/d48abe18a6ee985c311a547cdb02dbd0e852e59f))
+
 ## 1.0.0 (2026-02-03)
 
 ### ✨ Features

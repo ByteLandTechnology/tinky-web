@@ -481,9 +481,9 @@ export const Tinky = forwardRef<TinkyHandle, TinkyProps>(
       // Initialize Tinky with custom streams
       // Start with empty Box - actual children are rendered in another effect
       const instance = render(<Box />, {
-        stdout: stdout.asNodeWriteStream(),
-        stdin: stdin.asNodeReadStream(),
-        stderr: stderr.asNodeWriteStream(),
+        stdout,
+        stdin,
+        stderr,
         exitOnCtrlC: false, // Prevent Tinky from trying to call process.exit
         patchConsole: false, // Don't patch console.log since we're in browser
       });

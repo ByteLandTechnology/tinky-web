@@ -178,20 +178,6 @@ describe("TerminalWritableStream / End Method", () => {
 });
 
 describe("TerminalWritableStream / Properties", () => {
-  it("returns itself as Node WriteStream", () => {
-    const terminal = new Terminal();
-    const container = createContainer();
-    terminal.open(container);
-
-    const stdout = new TerminalWritableStream(terminal);
-    const nodeStream = stdout.asNodeWriteStream();
-
-    expect(nodeStream).toBe(stdout);
-
-    terminal.dispose();
-    container.remove();
-  });
-
   it("handles isTTY property", () => {
     const terminal = new Terminal();
     const container = createContainer();

@@ -1090,7 +1090,7 @@ const [isFocused, setIsFocused] = useState(false);
 
 #### See
 
-https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/inert
+[https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/inert](https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/inert)
 
 #### Inherited from
 

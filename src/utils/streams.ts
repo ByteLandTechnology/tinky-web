@@ -20,179 +20,8 @@
  */
 
 import { EventEmitter } from "tinky/lib/utils/event-emitter";
+import type { ReadStream, WriteStream } from "tinky";
 import type { Terminal } from "@xterm/xterm";
-
-// ============================================================================
-// Type Definitions
-// ============================================================================
-
-/**
- * Polyfill type for BufferEncoding
- *
- * This type is globally available in Node.js but missing in the browser.
- * It defines all valid encoding strings that can be used with Buffer operations.
- *
- * @remarks
- * While our implementation doesn't actually use encoding (since Xterm.js handles
- * strings directly), we need this type to match the Node.js stream interface
- * signatures that Tinky expects.
- */
-export type BufferEncoding =
-  | "ascii"
-  | "utf8"
-  | "utf-8"
-  | "utf16le"
-  | "ucs2"
-  | "ucs-2"
-  | "base64"
-  | "base64url"
-  | "latin1"
-  | "binary"
-  | "hex";
-
-/**
- * Interface representing the minimal writable stream API required by Tinky's render process
- *
- * Tinky checks for specific properties (like `isTTY`, `columns`, `rows`) and methods (`write`)
- * to interact with the output stream. This interface defines those requirements strictly,
- * allowing us to create a lightweight implementation without pulling in the entire
- * Node.js stream polyfill.
- *
- * @remarks
- * This interface is designed to be a subset of Node.js's `WriteStream` type.
- * It includes only the properties and methods that Tinky actually uses during rendering.
- *
- * Key requirements:
- * - `isTTY`: Must be `true` for Tinky to enable terminal features
- * - `columns`/`rows`: Used by Tinky for layout calculations
- * - `write()`: The primary method for outputting ANSI sequences and text
- *
- * @see https://nodejs.org/api/stream.html#stream_class_stream_writable
- */
-export interface TinkyWriteStream {
-  /**
-   * Indicates if the stream is connected to a TTY (terminal)
-   *
-   * When `true`, Tinky enables TTY-specific features such as:
-   * - ANSI color codes
-   * - Cursor manipulation
-   * - Screen clearing
-   *
-   * @remarks
-   * This should always be `true` for our implementation since we're
-   * rendering to an Xterm.js terminal which fully supports TTY features.
-   */
-  isTTY?: boolean;
-
-  /**
-   * The number of columns in the terminal
-   *
-   * Used by Tinky's layout engine to calculate component widths
-   * and perform text wrapping.
-   */
-  columns?: number;
-
-  /**
-   * The number of rows in the terminal
-   *
-   * Used by Tinky's layout engine to calculate component heights
-   * and determine scrolling behavior.
-   */
-  rows?: number;
-
-  /**
-   * Writes data to the stream
-   *
-   * @param str - The data to write
-   * @param encoding - The character encoding (ignored in our implementation)
-   * @param callback - Optional callback invoked when the write is complete
-   * @returns `true` if the stream is ready for more data (always true in our implementation)
-   */
-  write(
-    str: string,
-    encoding?: string,
-    cb?: (err?: Error | null) => void,
-  ): boolean;
-
-  /**
-   * Register an event listener.
-   *
-   * @param event - The event name (e.g., 'resize').
-   * @param listener - The callback function.
-   * @returns The stream instance for chaining.
-   */
-  on?(event: string, listener: (...args: unknown[]) => void): this;
-
-  /**
-   * Remove an event listener.
-   *
-   * @param event - The event name.
-   * @param listener - The callback function to remove.
-   * @returns The stream instance for chaining.
-   */
-  off?(event: string, listener: (...args: unknown[]) => void): this;
-}
-
-/**
- * Interface representing the minimal readable stream API required by Tinky's input handling
- *
- * This mimics a subset of Node.js's `ReadStream`, providing just enough functionality
- * for Tinky to listen for keypress events and manage input modes (raw mode).
- *
- * @remarks
- * Tinky uses a pull-based model for reading input:
- * 1. It listens for 'readable' events
- * 2. When triggered, it calls `read()` to get available data
- * 3. It processes the data through its input handling pipeline
- *
- * The `setRawMode` method is important for Tinky to receive individual keypresses
- * rather than line-buffered input.
- *
- * @see https://nodejs.org/api/stream.html#stream_class_stream_readable
- */
-export interface TinkyReadStream {
-  /**
-   * Indicates if the stream is connected to a TTY
-   *
-   * When `true`, features like `setRawMode` become available.
-   */
-  isTTY: boolean;
-
-  /**
-   * Sets the terminal to raw mode (character-by-character input) or cooked mode (line-buffered)
-   *
-   * @param mode - If `true`, enables raw mode for character-by-character input
-   * @returns The stream instance for chaining
-   *
-   * @remarks
-   * In raw mode, each keypress is immediately available without waiting for Enter.
-   * This is essential for interactive CLI applications like those built with Tinky.
-   */
-  setRawMode?(mode: boolean): this;
-
-  /**
-   * Sets the encoding for the stream
-   *
-   * @param encoding - The character encoding to use (e.g., 'utf-8')
-   */
-  setEncoding?(encoding: string): void;
-
-  /**
-   * Reads data from the stream
-   *
-   * @param size - Optional number of bytes to read (ignored in our implementation)
-   * @returns The next chunk of data, or `null` if no data is available
-   */
-  read?(size?: number): string | null;
-
-  /**
-   * Keeps the Node.js event loop active
-   *
-   * @remarks
-   * This is a no-op in the browser since there's no Node.js event loop.
-   */
-  ref?(): void;
-}
 
 // ============================================================================
 // TerminalWritableStream
@@ -238,11 +67,11 @@ export interface TinkyReadStream {
  * ```
  *
  * @extends EventEmitter
- * @implements TinkyWriteStream
+ * @implements WriteStream
  */
 export class TerminalWritableStream
   extends EventEmitter
-  implements TinkyWriteStream
+  implements WriteStream
 {
   /**
    * The underlying Xterm.js Terminal instance
@@ -599,14 +428,11 @@ export class TerminalWritableStream
    * const stdout = new TerminalWritableStream(terminal);
    *
    * render(<App />, {
-   *   stdout: stdout.asNodeWriteStream(),
+   *   stdout,
    *   // ...
    * });
    * ```
    */
-  asNodeWriteStream(): import("tinky").WriteStream {
-    return this as unknown as import("tinky").WriteStream;
-  }
 }
 
 // ============================================================================
@@ -617,16 +443,13 @@ export class TerminalWritableStream
  * A custom Readable stream that bridges between Xterm.js input and Tinky
  *
  * This class captures user keyboard input from Xterm.js's `onData` event,
- * buffers it, and provides it to Tinky through a Node.js-style readable stream API.
+ * and forwards it to Tinky through Node.js-style `data` events.
  *
  * @remarks
  * Key features:
  *
- * 1. **Input Buffering**: Incoming data is stored in an internal buffer until
- *    Tinky calls `read()` to consume it.
- *
- * 2. **Event-Based**: Emits 'readable' events when new data arrives, which
- *    Tinky listens to for triggering input processing.
+ * 1. **Event-Based**: Emits `data` events when new data arrives, which
+ *    Tinky listens to for input processing.
  *
  * 3. **Raw Mode Support**: Provides `setRawMode()` for API compatibility,
  *    though Xterm.js effectively always operates in raw mode.
@@ -639,22 +462,16 @@ export class TerminalWritableStream
  * const term = new Terminal();
  * const stdin = new TerminalReadableStream(term);
  *
- * // Listen for available input
- * stdin.on('readable', () => {
- *   const data = stdin.read();
- *   if (data) {
- *     console.log('Received:', data);
- *   }
+ * // Listen for input chunks
+ * stdin.on('data', (data) => {
+ *   console.log('Received:', data);
  * });
  * ```
  *
  * @extends EventEmitter
- * @implements TinkyReadStream
+ * @implements ReadStream
  */
-export class TerminalReadableStream
-  extends EventEmitter
-  implements TinkyReadStream
-{
+export class TerminalReadableStream extends EventEmitter implements ReadStream {
   /**
    * Indicates if the stream is connected to a TTY
    *
@@ -699,21 +516,11 @@ export class TerminalReadableStream
   /**
    * The underlying Xterm.js Terminal instance
    *
-   * Input events from this terminal are captured and buffered.
+   * Input events from this terminal are captured and emitted.
    *
    * @private
    */
   private term: Terminal;
-
-  /**
-   * Buffer for incoming data chunks
-   *
-   * Data received from Xterm.js's `onData` event is pushed here and
-   * consumed when Tinky calls `read()`.
-   *
-   * @private
-   */
-  private buffer: string[] = [];
 
   /**
    * Creates a new TerminalReadableStream
@@ -731,57 +538,35 @@ export class TerminalReadableStream
    * ```
    */
   constructor(term: Terminal) {
-    // Initialize EventEmitter for 'readable' event support
+    // Initialize EventEmitter for stdin event support
     super();
 
     // Store reference to the terminal
     this.term = term;
 
-    // Set up Xterm.js data handler
-    // The onData event fires whenever the user types or pastes text
-    // Tinky uses 'readable' event + read() method, not the 'data' event
+    // Set up Xterm.js data handler.
+    // The onData event fires whenever the user types or pastes text.
+    // Tinky consumes `data` events from stdin.
     this.term.onData((data: string) => {
-      // Push incoming data to the buffer
-      this.buffer.push(data);
-
-      // Emit 'readable' to notify Tinky that data is available for reading
-      this.emit("readable");
+      // Emit 'data' for Tinky's stdin handling.
+      this.emit("data", data);
     });
   }
 
   /**
-   * Reads data from the internal buffer
-   *
-   * Called by Tinky's input handling logic after receiving a 'readable' event.
-   * Returns one chunk at a time from the buffer.
+   * Reads data from the stream.
    *
    * @param _size - Number of bytes to read (ignored; we return one chunk per call)
-   * @returns The next chunk of data from the buffer, or `null` if empty
+   * @returns Always `null` in this implementation.
    *
    * @remarks
-   * Tinky calls this method in a loop after each 'readable' event until it
-   * returns `null`, indicating all available data has been consumed.
-   *
-   * @example
-   * ```typescript
-   * stdin.on('readable', () => {
-   *   let chunk;
-   *   while ((chunk = stdin.read()) !== null) {
-   *     processInput(chunk);
-   *   }
-   * });
-   * ```
+   * This method is kept only for API compatibility. Input delivery is event-based
+   * and happens through `data` events.
    */
   read(_size?: number): string | null {
-    // Consume _size to satisfy no-unused-vars (Node.js API compatibility)
+    // Consume _size to satisfy no-unused-vars (Node.js API compatibility).
     void _size;
-    // Return null if buffer is empty
-    if (this.buffer.length === 0) {
-      return null;
-    }
-
-    // Return and remove the first chunk from the buffer
-    return this.buffer.shift() ?? null;
+    return null;
   }
 
   /**
@@ -890,12 +675,9 @@ export class TerminalReadableStream
    * const stdin = new TerminalReadableStream(terminal);
    *
    * render(<App />, {
-   *   stdin: stdin.asNodeReadStream(),
+   *   stdin,
    *   // ...
    * });
    * ```
    */
-  asNodeReadStream(): import("tinky").ReadStream {
-    return this as unknown as import("tinky").ReadStream;
-  }
 }

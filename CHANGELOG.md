@@ -1,3 +1,9 @@
+## [1.0.2](https://github.com/ByteLandTechnology/tinky-web/compare/v1.0.1...v1.0.2) (2026-02-17)
+
+### ♻️ Refactoring
+
+- **streams:** simplify terminal streams and fix stdin input ([0dae1d8](https://github.com/ByteLandTechnology/tinky-web/commit/0dae1d8554470929f5c0026fd87c75c5dd3b3d5b))
+
 ## [1.0.1](https://github.com/ByteLandTechnology/tinky-web/compare/v1.0.0...v1.0.1) (2026-02-03)
 
 ### 🔧 Chores
